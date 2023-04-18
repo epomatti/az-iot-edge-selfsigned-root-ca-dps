@@ -53,7 +53,7 @@ curl "https://raw.githubusercontent.com/Azure/iotedge/main/tools/CACertificates/
 sudo bash certGen.sh create_root_and_intermediate
 
 # IoT Edge
-sudo bash certGen.sh create_edge_device_identity_certificate myEdgeDevice
+sudo bash certGen.sh create_edge_device_identity_certificate EdgeDevice
 ```
 
 After creating your certificates, upload the Root CA to the IoT Hub:
@@ -70,7 +70,7 @@ Register the device with x509_ca authentication method:
 
 ```
 az iot hub device-identity create \
-    --device-id "device-01" \
+    --device-id "EdgeDevice" \
     --hub-name iothub789 \
     --auth-method x509_ca \
     --edge-enabled
@@ -105,3 +105,109 @@ Then restart:
 sudo systemctl restart docker
 sudo systemctl status docker
 ```
+
+Install the Edge runtime:
+
+```
+sudo apt-get update; \
+   sudo apt-get install aziot-edge
+```
+
+Upload/copy the root CA certificate, device full-chain certificate, and the device private key to the Edge device. Example:
+
+- root.ca.cert.pem
+- edgedevice.full-chain.cert.pem
+- edgedevice.key.pem
+
+Copy and install the the root CA certificate in the device:
+
+```sh
+# Copy as .crt
+sudo cp root.ca.cert.pem /usr/local/share/ca-certificates/root.ca.cert.pem.crt
+
+# Install
+sudo update-ca-certificates
+```
+
+Confirm the certificate was installed:
+
+```
+ls /etc/ssl/certs/ | grep root
+```
+
+Create and move the device secrets:
+
+```
+sudo mkdir /var/secrets
+sudo mkdir /var/secrets/aziot
+sudo mv edgedevice.full-chain.cert.pem /var/secrets/aziot/
+sudo mv edgedevice.cert.pem /var/secrets/aziot/
+sudo mv edgedevice.key.pem /var/secrets/aziot/
+```
+
+Certificate directory:
+
+```sh
+# Give the IoT Edge user permission
+sudo chown -R iotedge: /tmp/iotedge
+```
+
+Provision the device:
+
+```sh
+sudo cp /etc/aziot/config.toml.edge.template /etc/aziot/config.toml
+sudo vim /etc/aziot/config.toml
+```
+
+Edit the "Manual provisioning with X.509 certificate" section:
+
+```toml
+trust_bundle_cert = "file:///etc/ssl/certs/root.ca.cert.pem.pem"
+```
+
+```toml
+# Manual provisioning with X.509 certificate
+[provisioning]
+source = "manual"
+iothub_hostname = "iothub789.azure-devices.net"
+device_id = "EdgeDevice"
+
+[provisioning.authentication]
+method = "x509"
+
+# identity certificate private key
+identity_pk = "file:///var/secrets/aziot/edgedevice.key.pem"
+
+# identity certificate
+identity_cert = "file:///var/secrets/aziot/edgedevice.full-chain.cert.pem"
+```
+
+Apply the configuration:
+
+```
+sudo iotedge config apply
+```
+
+Run the verification commands:
+
+```
+sudo iotedge system status
+sudo iotedge system logs
+sudo iotedge check
+```
+
+Using the Portal, add a marketplace Edge module, then check again:
+
+```
+sudo iotedge list
+```
+
+
+
+
+
+
+
+
+
+https://toddysm.com/2021/04/15/configuring-a-hierarchy-of-iot-edge-devices-at-home-part-2-configuring-the-enterprise-network-it/
