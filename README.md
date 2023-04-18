@@ -1,4 +1,8 @@
-# Azure IoT Edge Self-signed Root CA
+# Azure IoT Edge self-signed Root CA with DPS
+
+To provision an IoT Edge device with self-signed Root CA, it is [required to use DPS](https://learn.microsoft.com/en-us/azure/iot-edge/iot-edge-certs?view=iotedge-1.4#:~:text=IoT%20Hub%20currently%20doesn%27t%20support%20X.509%20CA%20authentication%20directly%20with%20IoT%20Edge.).
+
+<img src=".assets/iotedge-selfsignedca-dps.png" width=500 />
 
 Create the IoT Hub:
 
@@ -137,15 +141,7 @@ Copy the certificates:
 sudo mkdir /var/secrets
 sudo mkdir /var/secrets/aziot
 sudo mv edgedevice.full-chain.cert.pem /var/secrets/aziot/
-#sudo mv edgedevice.cert.pem /var/secrets/aziot/
 sudo mv edgedevice.key.pem /var/secrets/aziot/
-```
-
-Certificate directory:
-
-```sh
-# Give the IoT Edge user permission
-#sudo chown -R iotedge: /tmp/iotedge
 ```
 
 Create the configuration file:
